@@ -4,10 +4,11 @@ const {time} = require('@openzeppelin/test-helpers');
 
 describe("Lottery", function () {
     it("should deploy contract and return public variables", async function () {
+        const [owner] = await ethers.getSigners();
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice);
         const deploymentTime = await time.advanceBlock();
         await lottery.deployed();
 
@@ -34,7 +35,7 @@ describe("Lottery", function () {
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice);
         await lottery.deployed();
 
         const buyTx = await lottery.connect(address1).buy({value: ticketPrice});
@@ -63,7 +64,7 @@ describe("Lottery", function () {
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice);
         await lottery.deployed();
 
         const buyTx1 = await lottery.connect(address1).buy({value: ticketPrice.mul(2)});
@@ -101,7 +102,7 @@ describe("Lottery", function () {
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice);
         await lottery.deployed();
 
         const value = ticketPrice.mul(11).div(2);
@@ -137,7 +138,7 @@ describe("Lottery", function () {
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 0;
-        const lottery = await Lottery.deploy(lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice);
         await lottery.deployed();
 
         await expect(lottery.connect(address1).buy({value: ticketPrice})).to.be.revertedWith("Lottery ended");
@@ -147,23 +148,32 @@ describe("Lottery", function () {
         const [owner, address1] = await ethers.getSigners();
         const account1InitialBalance = await address1.getBalance();
         const ticketPrice = ethers.utils.parseEther("1");
+        const price = ticketPrice.mul(3).div(2);
+        const VRFCoordinatorV2Mock = await ethers.getContractFactory("VRFCoordinatorV2Mock");
+        const vRFCoordinatorV2Mock = await VRFCoordinatorV2Mock.deploy(1, 2);
+        await vRFCoordinatorV2Mock.deployed();
+        await vRFCoordinatorV2Mock.createSubscription();
+        await vRFCoordinatorV2Mock.fundSubscription(1, 10 ** 5);
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(1, vRFCoordinatorV2Mock.address, lotteryDuration, ticketPrice);
         await lottery.deployed();
-        const price = ticketPrice.mul(3).div(2);
 
         const buyTx = await lottery.connect(address1).buy({value: price});
         const buyTxResult = await buyTx.wait();
         await ethers.provider.send("evm_increaseTime", [lotteryDuration])
-        const endTx = await lottery.end();
+        const endTx = await lottery.connect(owner).end();
+        const requestId = await lottery.randomRequestId();
+        const fulfillRandomTx = await vRFCoordinatorV2Mock.fulfillRandomWords(requestId, lottery.address);
 
         const winner = await lottery.winner();
         expect(winner).to.equal(address1.address);
-        expect(endTx).to.emit(lottery, "LotteryEnded").withArgs(address1.address, price);
+        expect(endTx).to.emit(lottery, "LotteryEnded").withArgs(1);
         const account1Balance = await address1.getBalance();
         const gasFee1 = buyTxResult.effectiveGasPrice.mul(buyTxResult.cumulativeGasUsed);
         expect(account1Balance).to.equal(account1InitialBalance.sub(gasFee1));
+        expect(fulfillRandomTx).to.emit(lottery, "WinnerSelected").withArgs(address1.address, price);
+        expect(requestId).to.equal(1);
     });
 
     it("should buy two tickets & end lottery", async function () {
@@ -171,9 +181,14 @@ describe("Lottery", function () {
         const account1InitialBalance = await address1.getBalance();
         const account2InitialBalance = await address2.getBalance();
         const ticketPrice = ethers.utils.parseEther("1");
+        const VRFCoordinatorV2Mock = await ethers.getContractFactory("VRFCoordinatorV2Mock");
+        const vRFCoordinatorV2Mock = await VRFCoordinatorV2Mock.deploy(1, 2);
+        await vRFCoordinatorV2Mock.deployed();
+        await vRFCoordinatorV2Mock.createSubscription();
+        await vRFCoordinatorV2Mock.fundSubscription(1, 10 ** 5);
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(1, vRFCoordinatorV2Mock.address, lotteryDuration, ticketPrice);
         await lottery.deployed();
         const bid1 = ticketPrice.mul(3).div(2);
         const bid2 = ticketPrice.mul(3);
@@ -184,60 +199,72 @@ describe("Lottery", function () {
         const buyTx2Result = await buyTx2.wait();
         await ethers.provider.send("evm_increaseTime", [lotteryDuration])
         await lottery.end();
+        const requestId = await lottery.randomRequestId();
+        const fulfillRandomTx = await vRFCoordinatorV2Mock.fulfillRandomWords(requestId, lottery.address);
 
         const winner = await lottery.winner();
-        expect(winner).to.be.oneOf([address1.address, address2.address]);
-        if (winner === address1.address) {
-            const account1Balance = await address1.getBalance();
-            const gasFee1 = buyTx1Result.effectiveGasPrice.mul(buyTx1Result.cumulativeGasUsed);
-            expect(account1Balance).to.equal(account1InitialBalance.sub(gasFee1).add(bid2));
-            const account2Balance = await address2.getBalance();
-            const gasFee2 = buyTx2Result.effectiveGasPrice.mul(buyTx2Result.cumulativeGasUsed);
-            expect(account2Balance).to.equal(account2InitialBalance.sub(gasFee2).sub(bid2));
-        } else {
-            const account1Balance = await address1.getBalance();
-            const gasFee1 = buyTx1Result.effectiveGasPrice.mul(buyTx1Result.cumulativeGasUsed);
-            expect(account1Balance).to.equal(account1InitialBalance.sub(gasFee1).sub(bid1));
-            const account2Balance = await address2.getBalance();
-            const gasFee2 = buyTx2Result.effectiveGasPrice.mul(buyTx2Result.cumulativeGasUsed);
-            expect(account2Balance).to.equal(account2InitialBalance.sub(gasFee2).add(bid1));
-        }
+        expect(winner).to.be.equal(address2.address);
+        expect(requestId).to.equal(1);
+        const account1Balance = await address1.getBalance();
+        const gasFee1 = buyTx1Result.effectiveGasPrice.mul(buyTx1Result.cumulativeGasUsed);
+        expect(account1Balance).to.equal(account1InitialBalance.sub(gasFee1).sub(bid1));
+        const account2Balance = await address2.getBalance();
+        const gasFee2 = buyTx2Result.effectiveGasPrice.mul(buyTx2Result.cumulativeGasUsed);
+        expect(account2Balance).to.equal(account2InitialBalance.sub(gasFee2).add(bid1));
+        expect(fulfillRandomTx).to.emit(lottery, "WinnerSelected").withArgs(address2.address, bid1.add(bid2));
     });
 
-    it("should fail to end when there is already a winner", async function () {
+    it("should fail to end when already ended", async function () {
         const [owner, address1] = await ethers.getSigners();
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(1, owner.address, lotteryDuration, ticketPrice);
         await lottery.deployed();
 
-        await lottery.connect(address1).buy({value: ticketPrice});
         await ethers.provider.send("evm_increaseTime", [lotteryDuration])
-        await lottery.end();
+        const endTx = await lottery.end();
+        await endTx.wait();
 
-        await expect(lottery.end()).to.be.revertedWith("The winner has already been selected");
+        await expect(lottery.end()).to.be.revertedWith("Function end has been called already");
     });
 
-    it("should fail to end when lottery has not ended", async function () {
+    it("should fail to end when called not by owner", async function () {
+        const [owner, address1] = await ethers.getSigners();
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(1, owner.address, lotteryDuration, ticketPrice);
+        await lottery.deployed();
+
+        await ethers.provider.send("evm_increaseTime", [lotteryDuration])
+        await expect(lottery.connect(address1).end()).to.be.revertedWith("Function has to be called by owner");
+    });
+
+    it("should fail to end when lottery has not ended", async function () {
+        const [owner] = await ethers.getSigners();
+        const ticketPrice = ethers.utils.parseEther("1");
+        const Lottery = await ethers.getContractFactory("Lottery");
+        const lotteryDuration = 100;
+        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice);
         await lottery.deployed();
 
         await expect(lottery.end()).to.be.revertedWith("Lottery have not ended");
     });
 
-    it("should do nothing when no one participated", async function () {
+    it("should end lottery with no participants and emit event", async function () {
+        const [owner] = await ethers.getSigners();
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice);
         await lottery.deployed();
 
         await ethers.provider.send("evm_increaseTime", [lotteryDuration])
-        await lottery.end();
+        const endTx = await lottery.end();
+        expect(endTx).to.emit(lottery, "LotteryEnded").withArgs(0);
+        const requestId = await lottery.randomRequestId();
+        expect(requestId).to.equal(0);
     });
 
 });

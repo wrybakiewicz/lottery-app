@@ -1,23 +1,52 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-contract Lottery {
+import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+
+contract Lottery is VRFConsumerBaseV2 {
+
+    VRFCoordinatorV2Interface COORDINATOR;
+    LinkTokenInterface LINK_TOKEN;
+
+    uint64 subscriptionId;
+    address link = 0x01BE23585060835E02B77ef475b0Cc51aA1e0709;
+    uint32 callbackGasLimit = 100000;
+    uint16 requestConfirmations = 3;
+    bytes32 keyHash = 0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc;
+
+    uint256 public randomRequestId;
+    address public contractOwner;
+    uint32 numberOfWords = 1;
 
     uint public lotteryEndTime;
     uint public ticketPrice;
     mapping(uint => address) private ticketNumberToAddress;
     uint public ticketCount;
     address public winner;
+    bool ended;
 
     event TicketsBought(address buyer, uint count);
-    event LotteryEnded(address winner, uint price);
+    event LotteryEnded(uint ticketCount);
+    event WinnerSelected(address winner, uint price);
 
-    constructor (uint _lotteryDuration, uint _ticketPrice) {
+    constructor (uint64 _subscriptionId, address coordinator, uint _lotteryDuration, uint _ticketPrice) VRFConsumerBaseV2(coordinator) {
         require(_lotteryDuration >= 0, "Lottery duration must be >= 0");
         require(_ticketPrice > 0, "Ticket price must be > 0");
 
         lotteryEndTime = block.timestamp + _lotteryDuration;
         ticketPrice = _ticketPrice;
+
+        COORDINATOR = VRFCoordinatorV2Interface(coordinator);
+        LINK_TOKEN = LinkTokenInterface(link);
+        contractOwner = msg.sender;
+        subscriptionId = _subscriptionId;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == contractOwner, "Function has to be called by owner");
+        _;
     }
 
     modifier beforeLotteryEnd() {
@@ -25,13 +54,13 @@ contract Lottery {
         _;
     }
 
-    modifier afterLotteryEnd() {
+    modifier afterLotteryTimeEnd() {
         require(block.timestamp >= lotteryEndTime, "Lottery have not ended");
         _;
     }
 
-    modifier noWinner() {
-        require(winner == address(0), "The winner has already been selected");
+    modifier notEnded() {
+        require(!ended, "Function end has been called already");
         _;
     }
 
@@ -55,16 +84,37 @@ contract Lottery {
         return ticketNumberToAddress[ticketNumber];
     }
 
-    function end() external afterLotteryEnd noWinner noOneParticipated {
-        uint blockNumber = block.number;
-        bytes32 blockHashNow = blockhash(blockNumber - 1);
-        uint256 hash = uint256(blockHashNow);
-        uint winningTicket = hash % ticketCount;
+    function end() external afterLotteryTimeEnd notEnded onlyOwner {
+        if (ticketCount != 0) {
+            requestRandomNumber();
+        }
+        ended = true;
+        emit LotteryEnded(ticketCount);
+    }
+
+    function requestRandomNumber() internal {
+        randomRequestId = COORDINATOR.requestRandomWords(
+            keyHash,
+            subscriptionId,
+            requestConfirmations,
+            callbackGasLimit,
+            numberOfWords
+        );
+    }
+
+    function fulfillRandomWords(
+        uint256, /* requestId */
+        uint256[] memory randomWords
+    ) internal override {
+        uint randomNumber = randomWords[0];
+        uint winningTicket = randomNumber % ticketCount;
         winner = ticketNumberToAddress[winningTicket];
         uint award = address(this).balance;
+
         bool sent = payable(winner).send(award);
         require(sent, "Failed to send price to winner");
-        emit LotteryEnded(winner, award);
+        emit WinnerSelected(winner, award);
     }
+
 
 }

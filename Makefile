@@ -9,8 +9,8 @@ compile:
 test:
 	npx hardhat test
 
-deploy:
-	npx hardhat run scripts/deploy.js --network localhost
+deploy_local:
+	npx hardhat run scripts/01-lottery.js --network localhost
 
 node:
 	npx hardhat node

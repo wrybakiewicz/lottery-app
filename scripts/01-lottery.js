@@ -4,7 +4,7 @@ const {ethers} = require("ethers");
 
 async function main() {
     const Lottery = await hre.ethers.getContractFactory("Lottery");
-    const lottery = await Lottery.deploy(100, ethers.utils.parseEther("1"));
+    const lottery = await Lottery.deploy(10, 0x6168499c0cFfCaCD319c818142124B7A15E857ab, 100, ethers.utils.parseEther("1"));
 
     await lottery.deployed();
 
