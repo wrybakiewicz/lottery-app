@@ -10,7 +10,7 @@ test:
 	npx hardhat test
 
 deploy_local:
-	npx hardhat run scripts/01-lottery.js --network localhost
+	npx hardhat deploy --network localhost
 
 node:
-	npx hardhat node
+	npx hardhat node --no-deploy
