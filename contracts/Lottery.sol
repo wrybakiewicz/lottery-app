@@ -27,7 +27,7 @@ contract Lottery is VRFConsumerBaseV2 {
     address public winner;
     bool ended;
 
-    event TicketsBought(address buyer, uint count);
+    event TicketsBought(address indexed buyer, uint count);
     event LotteryEnded(uint ticketCount);
     event WinnerSelected(address winner, uint price);
 

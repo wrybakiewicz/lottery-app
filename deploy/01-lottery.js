@@ -12,11 +12,12 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         const vrfCoordinatorMockAddress = vrfCoordinatorMock.address
         const subscriptionId = await createSubscription(vrfCoordinatorMockAddress, log)
         await fundSubscription(vrfCoordinatorMockAddress, log, subscriptionId)
-        await deploy("Lottery", {
+        const lottery = await deploy("Lottery", {
             from: deployer,
-            args: [subscriptionId, vrfCoordinatorMockAddress, 100, ethers.utils.parseEther("1")],
+            args: [subscriptionId, vrfCoordinatorMockAddress, 1000, ethers.utils.parseEther("1")],
             log: true
         })
+        saveFrontendFiles(lottery.address)
     }
 
 }
@@ -61,7 +62,7 @@ async function main() {
     saveFrontendFiles(lottery);
 }
 
-function saveFrontendFiles(lottery) {
+function saveFrontendFiles(lotteryAddress) {
     const fs = require("fs");
     const contractsDir = __dirname + "/../frontend/src/contracts";
 
@@ -71,7 +72,7 @@ function saveFrontendFiles(lottery) {
 
     fs.writeFileSync(
         contractsDir + "/contract-address.json",
-        JSON.stringify({ Lottery: lottery.address }, undefined, 2)
+        JSON.stringify({ Lottery: lotteryAddress }, undefined, 2)
     );
 
     const LotteryArtifact = artifacts.readArtifactSync("Lottery");
