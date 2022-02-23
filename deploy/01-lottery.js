@@ -1,25 +1,43 @@
-const hre = require("hardhat");
-const fs = require("fs");
-const {network, ethers} = require("hardhat");
+const {network, ethers, run} = require("hardhat");
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const {deploy, get, log} = deployments
     const {deployer} = await getNamedAccounts()
+    let subscriptionId
+    let vrfCoordinator
+    const lotteryDuration = 50
+    let ticketPrice = ethers.utils.parseEther("0.001")
+    let keyHash
 
     log("Deploying lottery")
     if (network.name === "localhost") {
+        log("Deploying lottery on localhost")
         const vrfCoordinatorMock = await get("VRFCoordinatorV2Mock");
-        const vrfCoordinatorMockAddress = vrfCoordinatorMock.address
-        const subscriptionId = await createSubscription(vrfCoordinatorMockAddress, log)
-        await fundSubscription(vrfCoordinatorMockAddress, log, subscriptionId)
-        const lottery = await deploy("Lottery", {
-            from: deployer,
-            args: [subscriptionId, vrfCoordinatorMockAddress, 50, ethers.utils.parseEther("1")],
-            log: true
-        })
-        saveFrontendFiles(lottery.address)
+        vrfCoordinator = vrfCoordinatorMock.address
+        subscriptionId = await createSubscription(vrfCoordinator, log)
+        keyHash = '0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc'
+        await fundSubscription(vrfCoordinator, log, subscriptionId)
+    } else if(network.name === "rinkeby") {
+        log("Deploying lottery on rinkeby")
+        vrfCoordinator = '0x6168499c0cFfCaCD319c818142124B7A15E857ab'
+        keyHash = '0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc'
+        subscriptionId = 591;
+    } else {
+        throw new Error("Cannot deploy lottery - unsupported network")
     }
-
+    const args = [subscriptionId, vrfCoordinator, lotteryDuration, ticketPrice, keyHash];
+    const lottery = await deploy("Lottery", {
+        from: deployer,
+        args: args,
+        log: true
+    })
+    saveFrontendFiles(lottery.address)
+    if(network.name === "rinkeby") {
+        await run("verify:verify", {
+            address: lottery.address,
+            constructorArguments: args,
+        })
+    }
 }
 
 async function createSubscription(vrfCoordinatorMockAddress, log) {
@@ -49,17 +67,6 @@ async function getVrfCoordinatorMockContract(vrfCoordinatorMockAddress) {
         VrfCoordinatorMockContract.interface,
         signer
     );
-}
-
-async function main() {
-    const Lottery = await hre.ethers.getContractFactory("Lottery");
-    const lottery = await Lottery.deploy(10, 0x6168499c0cFfCaCD319c818142124B7A15E857ab, 100, ethers.utils.parseEther("1"));
-
-    await lottery.deployed();
-
-    console.log("Lottery deployed to:", lottery.address);
-
-    saveFrontendFiles(lottery);
 }
 
 function saveFrontendFiles(lotteryAddress) {

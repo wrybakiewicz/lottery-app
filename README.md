@@ -10,3 +10,9 @@ You can add a timelock-like feature where funds will be automatically sent back 
 - `make compile deploy_local`
 - from ./frontend `npm install` `npm start`
 - after lottery end `make select_winner_local`
+
+## How to run on rinkeby
+- add env file with `RINKEBY_RPC_URL` `MNEMONIC` `ETHERSCAN_API_KEY`
+- setup Chainlink `vrf.chain.link/rinkeby/`
+- set subscriptionId in `01-lottery.js`
+- `make compile deploy_rinkeby`

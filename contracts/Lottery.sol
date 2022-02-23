@@ -10,14 +10,13 @@ contract Lottery is VRFConsumerBaseV2 {
     VRFCoordinatorV2Interface COORDINATOR;
 
     uint64 subscriptionId;
-    address link = 0x01BE23585060835E02B77ef475b0Cc51aA1e0709;
     uint32 callbackGasLimit = 100000;
     uint16 requestConfirmations = 3;
-    bytes32 keyHash = 0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc;
+    bytes32 keyHash;
 
     uint256 public randomRequestId;
     address public contractOwner;
-    uint32 numberOfWords = 1;
+    uint32 numberOfWords = 5;
 
     uint public lotteryEndTime;
     uint public ticketPrice;
@@ -30,7 +29,7 @@ contract Lottery is VRFConsumerBaseV2 {
     event LotteryEnded(uint ticketCount);
     event WinnerSelected(address winner, uint price);
 
-    constructor (uint64 _subscriptionId, address coordinator, uint _lotteryDuration, uint _ticketPrice) VRFConsumerBaseV2(coordinator) {
+    constructor (uint64 _subscriptionId, address coordinator, uint _lotteryDuration, uint _ticketPrice, bytes32 _keyHash) VRFConsumerBaseV2(coordinator) {
         require(_lotteryDuration >= 0, "Lottery duration must be >= 0");
         require(_ticketPrice > 0, "Ticket price must be > 0");
 
@@ -40,6 +39,7 @@ contract Lottery is VRFConsumerBaseV2 {
         COORDINATOR = VRFCoordinatorV2Interface(coordinator);
         contractOwner = msg.sender;
         subscriptionId = _subscriptionId;
+        keyHash = _keyHash;
     }
 
     modifier beforeLotteryEnd() {

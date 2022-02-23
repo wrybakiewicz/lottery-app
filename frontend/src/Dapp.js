@@ -7,7 +7,7 @@ import {Buy} from "./Buy";
 import {Dashboard} from "./Dashboard";
 import moment from "moment";
 
-const HARDHAT_NETWORK_ID = '31337';
+const HARDHAT_NETWORK_ID = '4';
 
 export class Dapp extends React.Component {
 

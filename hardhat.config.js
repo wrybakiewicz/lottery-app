@@ -1,5 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 require('hardhat-deploy');
+require("dotenv").config()
+require("@nomiclabs/hardhat-etherscan");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -14,9 +16,6 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 
-/**
- * @type import('hardhat/config').HardhatUserConfig
- */
 module.exports = {
   solidity: {
     compilers: [
@@ -31,10 +30,21 @@ module.exports = {
   namedAccounts: {
     deployer: {
       default: 0,
-      1: 0,
     },
     feeCollector: {
-      default: 1,
+      default: 0,
     },
   },
+  networks: {
+    rinkeby: {
+      url: process.env.RINKEBY_RPC_URL,
+      accounts: {
+        mnemonic: process.env.MNEMONIC
+      },
+      chainId: 4
+    }
+  },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY
+  }
 };

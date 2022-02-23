@@ -1,14 +1,16 @@
 const {expect} = require("chai");
-const {ethers, waffle} = require("hardhat");
+const {network, ethers, waffle} = require("hardhat");
 const {time} = require('@openzeppelin/test-helpers');
 
-describe("Lottery", function () {
+const keyHash = '0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc'
+
+network.name === "hardhat" ? describe("Lottery", function () {
     it("should deploy contract and return public variables", async function () {
         const [owner] = await ethers.getSigners();
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice, keyHash);
         const deploymentTime = await time.advanceBlock();
         await lottery.deployed();
 
@@ -35,7 +37,7 @@ describe("Lottery", function () {
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice, keyHash);
         await lottery.deployed();
 
         const buyTx = await lottery.connect(address1).buy({value: ticketPrice});
@@ -64,7 +66,7 @@ describe("Lottery", function () {
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice, keyHash);
         await lottery.deployed();
 
         const buyTx1 = await lottery.connect(address1).buy({value: ticketPrice.mul(2)});
@@ -102,7 +104,7 @@ describe("Lottery", function () {
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice, keyHash);
         await lottery.deployed();
 
         const value = ticketPrice.mul(11).div(2);
@@ -138,7 +140,7 @@ describe("Lottery", function () {
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 0;
-        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice, keyHash);
         await lottery.deployed();
 
         await expect(lottery.connect(address1).buy({value: ticketPrice})).to.be.revertedWith("Lottery ended");
@@ -156,7 +158,7 @@ describe("Lottery", function () {
         await vRFCoordinatorV2Mock.fundSubscription(1, 10 ** 5);
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(1, vRFCoordinatorV2Mock.address, lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(1, vRFCoordinatorV2Mock.address, lotteryDuration, ticketPrice, keyHash);
         await lottery.deployed();
 
         const buyTx = await lottery.connect(address1).buy({value: price});
@@ -188,7 +190,7 @@ describe("Lottery", function () {
         await vRFCoordinatorV2Mock.fundSubscription(1, 10 ** 5);
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(1, vRFCoordinatorV2Mock.address, lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(1, vRFCoordinatorV2Mock.address, lotteryDuration, ticketPrice, keyHash);
         await lottery.deployed();
         const bid1 = ticketPrice.mul(3).div(2);
         const bid2 = ticketPrice.mul(3);
@@ -215,11 +217,11 @@ describe("Lottery", function () {
     });
 
     it("should fail to end when already ended", async function () {
-        const [owner, address1] = await ethers.getSigners();
+        const [owner] = await ethers.getSigners();
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(1, owner.address, lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(1, owner.address, lotteryDuration, ticketPrice, keyHash);
         await lottery.deployed();
 
         await ethers.provider.send("evm_increaseTime", [lotteryDuration])
@@ -234,7 +236,7 @@ describe("Lottery", function () {
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice, keyHash);
         await lottery.deployed();
 
         await expect(lottery.end()).to.be.revertedWith("Lottery have not ended");
@@ -245,7 +247,7 @@ describe("Lottery", function () {
         const ticketPrice = ethers.utils.parseEther("1");
         const Lottery = await ethers.getContractFactory("Lottery");
         const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice);
+        const lottery = await Lottery.deploy(0, owner.address, lotteryDuration, ticketPrice, keyHash);
         await lottery.deployed();
 
         await ethers.provider.send("evm_increaseTime", [lotteryDuration])
@@ -255,4 +257,4 @@ describe("Lottery", function () {
         expect(requestId).to.equal(0);
     });
 
-});
+}) : describe.skip;

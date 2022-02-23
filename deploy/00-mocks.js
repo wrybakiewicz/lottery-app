@@ -10,5 +10,7 @@ module.exports = async ({getNamedAccounts, deployments}) => {
         await deploy("VRFCoordinatorV2Mock", {contract: "VRFCoordinatorV2Mock", from: deployer, log: true, args: [1, 2]})
 
         log("Mocks Deployed!")
+    } else {
+        log("No mocks deployed")
     }
 }

@@ -143,7 +143,7 @@ export class Dashboard extends React.Component {
 
     selectWinner() {
         const {lottery} = this.props;
-        const endPromise = lottery.end()
+        const endPromise = lottery.end({gasLimit: 250000})
             .then(tx => tx.wait());
         toast.promise(endPromise, {
             pending: 'End transaction in progress',
