@@ -5,6 +5,7 @@ import contractAddress from "./contracts/contract-address.json";
 import {ethers} from "ethers";
 import {Buy} from "./Buy";
 import {Dashboard} from "./Dashboard";
+import moment from "moment";
 
 const HARDHAT_NETWORK_ID = '31337';
 
@@ -18,6 +19,7 @@ export class Dapp extends React.Component {
             lottery: undefined,
             buyActive: false,
             dashboardActive: true,
+            lotteryEndTime: undefined
         };
 
         this.state = this.initialState;
@@ -38,6 +40,10 @@ export class Dapp extends React.Component {
             );
         }
 
+        if (!this.state.lotteryEndTime) {
+            return <div>Loading...</div>;
+        }
+
         return <div className="container p-4">
             <div className="row">
                 <div className="col-12">
@@ -49,13 +55,7 @@ export class Dapp extends React.Component {
                                    dashboardActive: true
                                })} href="#">Dashboard</a>
                         </li>
-                        <li className="nav-item">
-                            <a className={"nav-link " + this.showActive(this.state.buyActive)}
-                               onClick={() => this.setState({
-                                   buyActive: true,
-                                   dashboardActive: false
-                               })} href="#">Buy</a>
-                        </li>
+                        {this.renderBuy()}
                     </ul>
                 </div>
             </div>
@@ -64,8 +64,9 @@ export class Dapp extends React.Component {
                 <div className="col-12 ">
                     <div>
                         {this.state.dashboardActive && (<Dashboard lottery={this.state.lottery}
-                                                       provider={this.state.provider}
-                                                       selectedAddress={this.state.selectedAddress}/>)}
+                                                                   provider={this.state.provider}
+                                                                   selectedAddress={this.state.selectedAddress}
+                                                                   lotteryEndTime={this.state.lotteryEndTime}/>)}
                     </div>
                     <div>
                         {this.state.buyActive && (<Buy lottery={this.state.lottery}
@@ -76,6 +77,18 @@ export class Dapp extends React.Component {
             </div>
 
         </div>;
+    }
+
+    renderBuy() {
+        if (moment().isBefore(this.state.lotteryEndTime)) {
+            return <li className="nav-item">
+                <a className={"nav-link " + this.showActive(this.state.buyActive)}
+                   onClick={() => this.setState({
+                       buyActive: true,
+                       dashboardActive: false
+                   })} href="#">Buy</a>
+            </li>;
+        }
     }
 
     async _connectWallet() {
@@ -111,7 +124,7 @@ export class Dapp extends React.Component {
         this.setState({
             selectedAddress: userAddress,
         });
-        this._intializeEthers();
+        this._intializeEthers().then(_ => this.updateLotteryEndTime());
     }
 
     async _intializeEthers() {
@@ -134,6 +147,13 @@ export class Dapp extends React.Component {
             return "active";
         }
         return "";
+    }
+
+    updateLotteryEndTime() {
+        this.state.lottery.lotteryEndTime().then(lotteryEndTime => {
+            const endTime = moment(lotteryEndTime.toNumber() * 1000);
+            this.setState({lotteryEndTime: endTime});
+        });
     }
 
 }

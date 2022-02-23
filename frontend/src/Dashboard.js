@@ -8,7 +8,6 @@ export class Dashboard extends React.Component {
 
     state = {
         ticketPrice: undefined,
-        lotteryEndTime: undefined,
         ticketsBought: undefined,
         totalTicketsBought: undefined,
         pricePool: undefined,
@@ -33,14 +32,14 @@ export class Dashboard extends React.Component {
     render() {
         if (this.state.ticketsBought === undefined
             || !this.state.ticketPrice
-            || !this.state.lotteryEndTime
+            || !this.props.lotteryEndTime
             || this.state.totalTicketsBought === undefined
             || this.state.pricePool === undefined) {
             return <div></div>;
         }
 
         return <div className="d-flex align-items-center flex-column p-4">
-            <p className="h3">Lottery end time: {this.state.lotteryEndTime.format('DD/MM/YYYY HH:mm')}</p>
+            <p className="h3">Lottery end time: {this.props.lotteryEndTime.format('DD/MM/YYYY HH:mm')}</p>
             {this.renderLotteryInProgress()}
             {this.renderSelectWinner()}
             {this.renderShowWinner()}
@@ -53,7 +52,7 @@ export class Dashboard extends React.Component {
     }
 
     renderLotteryInProgress() {
-        if (moment().isBefore(this.state.lotteryEndTime)) {
+        if (moment().isBefore(this.props.lotteryEndTime)) {
             return <div className="alert alert-success" role="alert">
                 Lottery in progress !
             </div>;
@@ -61,7 +60,7 @@ export class Dashboard extends React.Component {
     }
 
     renderSelectWinner() {
-        if (moment().isAfter(this.state.lotteryEndTime) && !this.state.winner) {
+        if (moment().isAfter(this.props.lotteryEndTime) && !this.state.winner) {
             return <div className="d-flex align-items-center flex-column p-4">
                 <div className="alert alert-secondary" role="alert">
                     Lottery has ended. Run winner selection
@@ -74,7 +73,7 @@ export class Dashboard extends React.Component {
     }
 
     renderWaitingForWinner() {
-        if (moment().isAfter(this.state.lotteryEndTime) && this.state.winner === ethers.constants.AddressZero) {
+        if (moment().isAfter(this.props.lotteryEndTime) && this.state.winner === ethers.constants.AddressZero) {
             return <div className="alert alert-secondary" role="alert">
                 Lottery has ended. Waiting for winner selection.
             </div>;
@@ -82,7 +81,7 @@ export class Dashboard extends React.Component {
     }
 
     renderShowWinner() {
-        if (moment().isAfter(this.state.lotteryEndTime) && this.state.winner && this.state.winner !== ethers.constants.AddressZero) {
+        if (moment().isAfter(this.props.lotteryEndTime) && this.state.winner && this.state.winner !== ethers.constants.AddressZero) {
             return <div className="alert alert-primary" role="alert">
                 Lottery has ended. Winner: {this.state.winner}
             </div>;
@@ -94,10 +93,10 @@ export class Dashboard extends React.Component {
         const {lottery, provider, selectedAddress} = this.props;
 
         if (lottery && provider && selectedAddress) {
-            this.updateLotteryEndTime();
             this.updateTotalTicketsBought();
             this.updateTicketsBought();
             this.updateTicketPrice();
+            this.updateEnded();
         }
     }
 
@@ -115,14 +114,6 @@ export class Dashboard extends React.Component {
             .then(_ => this.updatePricePool());
     }
 
-    updateLotteryEndTime() {
-        const {lottery} = this.props;
-        lottery.lotteryEndTime().then(lotteryEndTime => {
-            const endTime = moment(lotteryEndTime.toNumber() * 1000);
-            this.setState({lotteryEndTime: endTime});
-        }).then(_ => this.updateEnded());
-    }
-
     updateTotalTicketsBought() {
         const {lottery} = this.props;
         lottery.ticketCount().then(ticketCount => {
@@ -138,7 +129,7 @@ export class Dashboard extends React.Component {
     }
 
     updateEnded() {
-        if (moment().isAfter(this.state.lotteryEndTime)) {
+        if (moment().isAfter(this.props.lotteryEndTime)) {
             const {lottery} = this.props;
             lottery.ended().then(ended => {
                 if (ended) {
