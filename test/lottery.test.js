@@ -229,18 +229,6 @@ describe("Lottery", function () {
         await expect(lottery.end()).to.be.revertedWith("Function end has been called already");
     });
 
-    it("should fail to end when called not by owner", async function () {
-        const [owner, address1] = await ethers.getSigners();
-        const ticketPrice = ethers.utils.parseEther("1");
-        const Lottery = await ethers.getContractFactory("Lottery");
-        const lotteryDuration = 100;
-        const lottery = await Lottery.deploy(1, owner.address, lotteryDuration, ticketPrice);
-        await lottery.deployed();
-
-        await ethers.provider.send("evm_increaseTime", [lotteryDuration])
-        await expect(lottery.connect(address1).end()).to.be.revertedWith("Function has to be called by owner");
-    });
-
     it("should fail to end when lottery has not ended", async function () {
         const [owner] = await ethers.getSigners();
         const ticketPrice = ethers.utils.parseEther("1");

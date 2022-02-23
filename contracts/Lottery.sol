@@ -8,7 +8,6 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 contract Lottery is VRFConsumerBaseV2 {
 
     VRFCoordinatorV2Interface COORDINATOR;
-    LinkTokenInterface LINK_TOKEN;
 
     uint64 subscriptionId;
     address link = 0x01BE23585060835E02B77ef475b0Cc51aA1e0709;
@@ -25,7 +24,7 @@ contract Lottery is VRFConsumerBaseV2 {
     mapping(uint => address) private ticketNumberToAddress;
     uint public ticketCount;
     address public winner;
-    bool ended;
+    bool public ended;
 
     event TicketsBought(address indexed buyer, uint count);
     event LotteryEnded(uint ticketCount);
@@ -39,14 +38,8 @@ contract Lottery is VRFConsumerBaseV2 {
         ticketPrice = _ticketPrice;
 
         COORDINATOR = VRFCoordinatorV2Interface(coordinator);
-        LINK_TOKEN = LinkTokenInterface(link);
         contractOwner = msg.sender;
         subscriptionId = _subscriptionId;
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == contractOwner, "Function has to be called by owner");
-        _;
     }
 
     modifier beforeLotteryEnd() {
@@ -84,7 +77,7 @@ contract Lottery is VRFConsumerBaseV2 {
         return ticketNumberToAddress[ticketNumber];
     }
 
-    function end() external afterLotteryTimeEnd notEnded onlyOwner {
+    function end() external afterLotteryTimeEnd notEnded {
         if (ticketCount != 0) {
             requestRandomNumber();
         }

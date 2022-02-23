@@ -49,6 +49,7 @@ export class Buy extends React.Component {
     }
 
     async update() {
+        console.log("Updating Buy component");
         const {lottery, provider, selectedAddress} = this.props;
 
         if (lottery && provider && selectedAddress) {

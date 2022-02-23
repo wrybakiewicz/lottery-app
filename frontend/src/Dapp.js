@@ -4,6 +4,7 @@ import LotteryArtifact from "./contracts/Lottery.json";
 import contractAddress from "./contracts/contract-address.json";
 import {ethers} from "ethers";
 import {Buy} from "./Buy";
+import {Dashboard} from "./Dashboard";
 
 const HARDHAT_NETWORK_ID = '31337';
 
@@ -15,7 +16,8 @@ export class Dapp extends React.Component {
         this.initialState = {
             selectedAddress: undefined,
             lottery: undefined,
-            buyActive: true,
+            buyActive: false,
+            dashboardActive: true,
         };
 
         this.state = this.initialState;
@@ -41,9 +43,17 @@ export class Dapp extends React.Component {
                 <div className="col-12">
                     <ul className="nav nav-tabs justify-content-center">
                         <li className="nav-item">
+                            <a className={"nav-link " + this.showActive(this.state.dashboardActive)}
+                               onClick={() => this.setState({
+                                   buyActive: false,
+                                   dashboardActive: true
+                               })} href="#">Dashboard</a>
+                        </li>
+                        <li className="nav-item">
                             <a className={"nav-link " + this.showActive(this.state.buyActive)}
                                onClick={() => this.setState({
-                                   buyActive: true
+                                   buyActive: true,
+                                   dashboardActive: false
                                })} href="#">Buy</a>
                         </li>
                     </ul>
@@ -52,8 +62,11 @@ export class Dapp extends React.Component {
 
             <div className="row">
                 <div className="col-12 ">
-                    {//TODO: lottery status
-                        }
+                    <div>
+                        {this.state.dashboardActive && (<Dashboard lottery={this.state.lottery}
+                                                       provider={this.state.provider}
+                                                       selectedAddress={this.state.selectedAddress}/>)}
+                    </div>
                     <div>
                         {this.state.buyActive && (<Buy lottery={this.state.lottery}
                                                        provider={this.state.provider}

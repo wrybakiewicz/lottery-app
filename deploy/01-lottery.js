@@ -14,7 +14,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         await fundSubscription(vrfCoordinatorMockAddress, log, subscriptionId)
         const lottery = await deploy("Lottery", {
             from: deployer,
-            args: [subscriptionId, vrfCoordinatorMockAddress, 1000, ethers.utils.parseEther("1")],
+            args: [subscriptionId, vrfCoordinatorMockAddress, 50, ethers.utils.parseEther("1")],
             log: true
         })
         saveFrontendFiles(lottery.address)

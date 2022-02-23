@@ -14,3 +14,6 @@ deploy_local:
 
 node:
 	npx hardhat node --no-deploy
+
+select_winner_local:
+	npx hardhat run scripts/selectWinnerLocal.js --network localhost
