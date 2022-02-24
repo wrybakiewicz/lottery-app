@@ -16,3 +16,4 @@ You can add a timelock-like feature where funds will be automatically sent back 
 - setup Chainlink `vrf.chain.link/rinkeby/`
 - set subscriptionId in `01-lottery.js`
 - `make compile deploy_rinkeby`
+- set consumer in Chainlink subscription
